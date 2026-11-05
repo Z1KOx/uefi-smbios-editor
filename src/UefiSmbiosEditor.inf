@@ -12,12 +12,16 @@
 [Packages]
   MdePkg/MdePkg.dec
 
+[Protocols]
+  gEfiSmbiosProtocolGuid
+
 [LibraryClasses]
   BaseMemoryLib
   UefiApplicationEntryPoint
   UefiLib
   UefiBootServicesTableLib
+  DebugLib
 
 [Guids]
-  gEfiSmbiosTableGuid    ## SOMETIMES_CONSUMES ## System Table
-  gEfiSmbios3TableGuid   ## SOMETIMES_CONSUMES ## System Table
+  gEfiSmbiosTableGuid
+  gEfiSmbios3TableGuid

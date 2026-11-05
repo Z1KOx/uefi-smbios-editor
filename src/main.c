@@ -9,41 +9,33 @@
 #include <Protocol/Smbios.h>
 #include <IndustryStandard/SmBios.h>
 
-EFI_STATUS
-EFIAPI
-UefiMain (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
+EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable)
 {
-    EFI_STATUS               Status;
-    EFI_SMBIOS_PROTOCOL      *Smbios;
-    EFI_SMBIOS_TABLE_HEADER  *Record;
-    EFI_SMBIOS_HANDLE        HSmbios;
+    EFI_SMBIOS_PROTOCOL *smbios;
 
-    Status = gBS->LocateProtocol (&gEfiSmbiosProtocolGuid, NULL, (VOID**)&Smbios);
-    if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Couldn't locate smbios protocol: %r\n", Status));
-        return Status;
+    EFI_STATUS status = gBS->LocateProtocol (&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
+    if (EFI_ERROR (status)) {
+        DEBUG ((DEBUG_ERROR, "Couldn't locate smbios protocol: %r\n", status));
+        return status;
     }
 
-    HSmbios = SMBIOS_HANDLE_PI_RESERVED;
+    EFI_SMBIOS_HANDLE hSmbios = SMBIOS_HANDLE_PI_RESERVED;
+    EFI_SMBIOS_TABLE_HEADER *record;
 
     while (TRUE)
     {
-      Status = Smbios->GetNext (Smbios, &HSmbios, NULL, &Record, NULL);
+      status = smbios->GetNext (smbios, &hSmbios, NULL, &record, NULL);
 
-      if (EFI_ERROR (Status)) {
+      if (EFI_ERROR (status)) {
           break;
       }
 
-      if (Record->Type == SMBIOS_TYPE_BIOS_INFORMATION) {
-          SMBIOS_TABLE_TYPE0 *Type0 = (SMBIOS_TABLE_TYPE0*) Record;
+      if (record->Type == SMBIOS_TYPE_BIOS_INFORMATION) {
+          SMBIOS_TABLE_TYPE0 *Type0 = (SMBIOS_TABLE_TYPE0*) record;
           DEBUG ((DEBUG_INFO, "Found SMBIOS Type 0. Length: %d\n", Type0->Hdr.Length));
           Print (L"Found SMBIOS Type 0. Length: %d\n", Type0->Hdr.Length);
       }
     }
 
-    Print (L"Hello World from UEFI!\n");
     return EFI_SUCCESS;
 }

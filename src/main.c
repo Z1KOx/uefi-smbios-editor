@@ -8,6 +8,7 @@
 #include <Library/DebugLib.h>
 #include <Protocol/Smbios.h>
 #include <IndustryStandard/SmBios.h>
+#include <Library/BaseMemoryLib.h>
 
 CHAR8* getstring(CHAR8 *StringArea, UINT8 type0index)
 {
@@ -29,6 +30,17 @@ CHAR8* getstring(CHAR8 *StringArea, UINT8 type0index)
     return vendorstr;
 }
 
+typedef struct smbios_information 
+{
+    CHAR8 *vendor;
+    CHAR8 *bios_version;
+    CHAR8 *release_date;
+    CHAR8 *manufacturer;
+    CHAR8 *product_name;
+    CHAR8 *version;
+    CHAR8 *serial_number;
+} SMBIOS_INFORMATION;
+
 EFI_STATUS
 EFIAPI
 UefiMain (
@@ -46,10 +58,10 @@ UefiMain (
 
     if (EFI_ERROR(status)) 
     {
-      DEBUG((
-            DEBUG_ERROR,
-            "Couldn't locate SMBIOS protocol: %r\n",
-            status
+        DEBUG((
+              DEBUG_ERROR,
+              "Couldn't locate SMBIOS protocol: %r\n",
+              status
       ));
         
       return status;
@@ -58,51 +70,56 @@ UefiMain (
     EFI_SMBIOS_HANDLE hSmbios = SMBIOS_HANDLE_PI_RESERVED;
     EFI_SMBIOS_TABLE_HEADER *record;
 
+    SMBIOS_INFORMATION smbios_info;
+    SetMem(&smbios_info, sizeof(smbios_info), 0);
+
     while (TRUE)
     {
-      status = smbios->GetNext(
-          smbios,
-          &hSmbios,
-          NULL,
-          &record,
-          NULL
-      );
-      
-      if (EFI_ERROR(status)) {
-          break;
-      }
-
-      if (record->Type == SMBIOS_TYPE_BIOS_INFORMATION) 
-      {
-        SMBIOS_TABLE_TYPE0 *type0 = (SMBIOS_TABLE_TYPE0*) record;
-        DEBUG((
-            DEBUG_INFO, 
-            "Found SMBIOS Type 0. Length: %d\n", 
-            type0->Hdr.Length
-        ));
-            Print(
-            L"Found SMBIOS Type 0. Length: %d\n", 
-            type0->Hdr.Length
+        status = smbios->GetNext(
+            smbios,
+            &hSmbios,
+            NULL,
+            &record,
+            NULL
         );
-
-        CHAR8 *StringArea = (CHAR8 *)record + type0->Hdr.Length;
-
-        const CHAR8 *vendor = getstring(StringArea, type0->Vendor);
-        const CHAR8 *version = getstring(StringArea, type0->BiosVersion);
-        const CHAR8 *date = getstring(StringArea, type0->BiosReleaseDate);
-
-        if (vendor != NULL) {
-           Print(L"Vendor: %a\n", vendor);
+      
+        if (EFI_ERROR(status)) {
+            break;
         }
 
-        if (version != NULL) {
-            Print(L"Version: %a\n", version);
-        }
+        if (record->Type == SMBIOS_TYPE_BIOS_INFORMATION) 
+        {
+            SMBIOS_TABLE_TYPE0 *type0 = (SMBIOS_TABLE_TYPE0*) record;
+            DEBUG((
+                DEBUG_INFO, 
+                "Found SMBIOS Type 0. Length: %d\n", 
+                type0->Hdr.Length
+            ));
+                Print(
+                L"Found SMBIOS Type 0. Length: %d\n", 
+                type0->Hdr.Length
+            );
+
+            CHAR8 *StringArea = (CHAR8*)record + type0->Hdr.Length;
+
+            smbios_info.vendor = getstring(StringArea, type0->Vendor);
+            smbios_info.bios_version = getstring(StringArea, type0->BiosVersion);
+            smbios_info.release_date = getstring(StringArea, type0->BiosReleaseDate);
+
+            if (smbios_info.vendor != NULL) {
+                Print(L"Vendor: %a\n", smbios_info.vendor);
+            }
+
+            if (smbios_info.bios_version != NULL) {
+                Print(L"Bios Version: %a\n", smbios_info.bios_version);
+            }
               
-        if (date != NULL) {
-            Print(L"Release Date: %a\n", date);
+            if (smbios_info.release_date != NULL) {
+                Print(L"Release Date: %a\n", smbios_info.release_date);
+            }
+
+
         }
-      }
     }
 
     return EFI_SUCCESS;

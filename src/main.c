@@ -1,3 +1,4 @@
+
 /**
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -10,27 +11,31 @@
 #include <IndustryStandard/SmBios.h>
 #include <Library/BaseMemoryLib.h>
 
-CHAR8* getstring(CHAR8 *StringArea, UINT8 type0index)
+CHAR8*
+getstring(
+    CHAR8* StringArea,
+    UINT8 StringIndex
+)
 {
-    CHAR8 *vendorstr = StringArea;
+    CHAR8* str = StringArea;
 
-    if (type0index == 0) {
+    if (StringIndex == 0 || StringArea == NULL) {
         return NULL;
     }
 
-    for (UINT8 i = 1; i < type0index; i++)
+    for (UINT8 i = 1; i < StringIndex; ++i)
     {
-        while (*vendorstr != '\0') {
-            vendorstr++;
+        while (*str != '\0') {
+            str++;
         }
 
-        vendorstr++;
+        str++;
     }
 
-    return vendorstr;
+    return str;
 }
 
-typedef struct smbios_information 
+typedef struct smbios_information
 {
     CHAR8 *vendor;
     CHAR8 *bios_version;
@@ -41,30 +46,31 @@ typedef struct smbios_information
     CHAR8 *serial_number;
 } SMBIOS_INFORMATION;
 
+
 EFI_STATUS
 EFIAPI
-UefiMain (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
+UefiMain(
+    IN EFI_HANDLE ImageHandle,
+    IN EFI_SYSTEM_TABLE *SystemTable
+)
 {
     EFI_SMBIOS_PROTOCOL *smbios;
 
     EFI_STATUS status = gBS->LocateProtocol(
-          &gEfiSmbiosProtocolGuid,
-          NULL,
-          (VOID**)&smbios
+        &gEfiSmbiosProtocolGuid,
+        NULL,
+        (VOID**)&smbios
     );
 
-    if (EFI_ERROR(status)) 
+    if (EFI_ERROR(status))
     {
         DEBUG((
-              DEBUG_ERROR,
-              "Couldn't locate SMBIOS protocol: %r\n",
-              status
-      ));
-        
-      return status;
+            DEBUG_ERROR,
+            "Couldn't locate SMBIOS protocol: %r\n",
+            status
+            ));
+
+        return status;
     }
 
     EFI_SMBIOS_HANDLE hSmbios = SMBIOS_HANDLE_PI_RESERVED;
@@ -82,24 +88,16 @@ UefiMain (
             &record,
             NULL
         );
-      
+
         if (EFI_ERROR(status)) {
             break;
         }
 
-        if (record->Type == SMBIOS_TYPE_BIOS_INFORMATION) 
+        switch (record->Type)
         {
-            SMBIOS_TABLE_TYPE0 *type0 = (SMBIOS_TABLE_TYPE0*) record;
-            DEBUG((
-                DEBUG_INFO, 
-                "Found SMBIOS Type 0. Length: %d\n", 
-                type0->Hdr.Length
-            ));
-                Print(
-                L"Found SMBIOS Type 0. Length: %d\n", 
-                type0->Hdr.Length
-            );
-
+        case SMBIOS_TYPE_BIOS_INFORMATION:
+        {
+            SMBIOS_TABLE_TYPE0 *type0 = (SMBIOS_TABLE_TYPE0*)record;
             CHAR8 *StringArea = (CHAR8*)record + type0->Hdr.Length;
 
             smbios_info.vendor = getstring(StringArea, type0->Vendor);
@@ -111,14 +109,49 @@ UefiMain (
             }
 
             if (smbios_info.bios_version != NULL) {
-                Print(L"Bios Version: %a\n", smbios_info.bios_version);
+                Print(L"BIOS Version: %a\n", smbios_info.bios_version);
             }
-              
+
             if (smbios_info.release_date != NULL) {
                 Print(L"Release Date: %a\n", smbios_info.release_date);
             }
 
+            break;
+        }
+        case SMBIOS_TYPE_SYSTEM_INFORMATION:
+        {
+            SMBIOS_TABLE_TYPE1 *type1 = (SMBIOS_TABLE_TYPE1*)record;
+            CHAR8 *StringArea = (CHAR8*)record + type1->Hdr.Length;
 
+            smbios_info.manufacturer = getstring(StringArea, type1->Manufacturer);
+
+            smbios_info.product_name = getstring(StringArea, type1->ProductName);
+
+            smbios_info.version = getstring(StringArea, type1->Version);
+
+            smbios_info.serial_number = getstring(StringArea, type1->SerialNumber);
+
+            if (smbios_info.manufacturer != NULL) {
+                Print(L"Manufacturer: %a\n", smbios_info.manufacturer);
+            }
+
+            if (smbios_info.product_name != NULL) {
+                Print(L"Product Name: %a\n", smbios_info.product_name);
+            }
+
+            if (smbios_info.version != NULL) {
+                Print(L"Version: %a\n", smbios_info.version);
+            }
+
+            if (smbios_info.serial_number != NULL) {
+                Print(L"Serial Number: %a\n", smbios_info.serial_number);
+            }
+
+            break;
+        }
+
+        default:
+            break;
         }
     }
 

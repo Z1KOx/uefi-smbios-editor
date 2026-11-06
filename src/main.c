@@ -104,6 +104,8 @@ UefiMain(
             smbios_info.bios_version = getstring(StringArea, type0->BiosVersion);
             smbios_info.release_date = getstring(StringArea, type0->BiosReleaseDate);
 
+            Print(L"\n--- BIOS INFORMATION (TYPE0) ---\n");
+
             if (smbios_info.vendor != NULL) {
                 Print(L"Vendor: %a\n", smbios_info.vendor);
             }
@@ -129,6 +131,8 @@ UefiMain(
             smbios_info.serial_number = getstring(StringArea, type1->SerialNumber);
             smbios_info.uuid = type1->Uuid;
 
+            Print(L"\n--- SYSTEM INFORMATION (TYPE1) ---\n");
+
             if (smbios_info.manufacturer != NULL) {
                 Print(L"Manufacturer: %a\n", smbios_info.manufacturer);
             }
@@ -146,6 +150,36 @@ UefiMain(
             }
 
             Print(L"UUID: %g\n", &smbios_info.uuid);
+
+            break;
+        }
+        case SMBIOS_TYPE_BASEBOARD_INFORMATION:
+        {
+            SMBIOS_TABLE_TYPE2 *type2 = (SMBIOS_TABLE_TYPE2*)record;
+            CHAR8 *StringArea = (CHAR8*)record + type2->Hdr.Length;
+
+            CHAR8 *manufacturer = getstring(StringArea, type2->Manufacturer);
+            CHAR8 *product_name = getstring(StringArea, type2->ProductName);
+            CHAR8 *version = getstring(StringArea, type2->Version);
+            CHAR8 *serial_number = getstring(StringArea, type2->SerialNumber);
+
+            Print(L"\n--- BASEBOARD INFORMATION (TYPE2) ---\n");
+
+            if (manufacturer != NULL) {
+                Print(L"Mainboard Manufacturer: %a\n", manufacturer);
+            }
+
+            if (product_name != NULL) {
+                Print(L"Product Name: %a\n", product_name);
+            }
+
+            if (version != NULL) {
+                Print(L"Version: %a\n", version);
+            }
+
+            if (serial_number != NULL) {
+                Print(L"Serial Number: %a\n", serial_number);
+            }
 
             break;
         }

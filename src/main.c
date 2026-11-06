@@ -1,4 +1,3 @@
-
 /**
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -37,13 +36,14 @@ getstring(
 
 typedef struct smbios_information
 {
-    CHAR8 *vendor;
-    CHAR8 *bios_version;
-    CHAR8 *release_date;
-    CHAR8 *manufacturer;
-    CHAR8 *product_name;
-    CHAR8 *version;
-    CHAR8 *serial_number;
+    CHAR8    *vendor;
+    CHAR8    *bios_version;
+    CHAR8    *release_date;
+    CHAR8    *manufacturer;
+    CHAR8    *product_name;
+    CHAR8    *version;
+    CHAR8    *serial_number;
+    EFI_GUID uuid;
 } SMBIOS_INFORMATION;
 
 
@@ -124,12 +124,10 @@ UefiMain(
             CHAR8 *StringArea = (CHAR8*)record + type1->Hdr.Length;
 
             smbios_info.manufacturer = getstring(StringArea, type1->Manufacturer);
-
             smbios_info.product_name = getstring(StringArea, type1->ProductName);
-
             smbios_info.version = getstring(StringArea, type1->Version);
-
             smbios_info.serial_number = getstring(StringArea, type1->SerialNumber);
+            smbios_info.uuid = type1->Uuid;
 
             if (smbios_info.manufacturer != NULL) {
                 Print(L"Manufacturer: %a\n", smbios_info.manufacturer);
@@ -147,9 +145,10 @@ UefiMain(
                 Print(L"Serial Number: %a\n", smbios_info.serial_number);
             }
 
+            Print(L"UUID: %g\n", &smbios_info.uuid);
+
             break;
         }
-
         default:
             break;
         }

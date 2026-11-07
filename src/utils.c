@@ -8,39 +8,24 @@
 
 #include "utils.h"
 
-CHAR8*
-smbios_get_string(
-    CHAR8 *string_area,
-    UINT8 string_index
-)
-{
-    CHAR8 *str = string_area;
-
-    if (string_index == 0 || string_area == NULL) {
-        return NULL;
-    }
-
-    for (UINT8 i = 1; i < string_index; i++) 
-    {
-        while (*str != '\0') {
-            str++;
-        }
-        str++;
-    }
-
-    return str;
-}
-
 VOID
 smbios_print_string(
-    CONST CHAR16 *label,
-    CHAR8        *string_area,
-    UINT8        string_index
+    CONST CHAR16            *label,
+    EFI_SMBIOS_TABLE_HEADER *record,
+    UINT8                   string_index
 )
 {
-    CHAR8 *str = smbios_get_string(string_area, string_index);
+    CHAR8 *str = (CHAR8*)record + record->Length;
 
-    if (str != NULL && *str != '\0') {
+    if (string_index == 0) {
+        return;
+    }
+
+    while (--string_index && *str) {
+        while (*str++) {}
+    }
+
+    if (*str) {
         Print(L"%s: %a\n", label, str);
     }
 }

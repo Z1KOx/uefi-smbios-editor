@@ -15,149 +15,96 @@
 #include "smbios.h"
 #include "utils.h"
 
-static
-VOID
-smbios_print_type0_bios(
-    EFI_SMBIOS_TABLE_HEADER *record
-)
-{
-    SMBIOS_TABLE_TYPE0 *type0 = (SMBIOS_TABLE_TYPE0*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type0->Hdr.Length);
+#define print_str(label, member) smbios_print_string(label, record, t->member)
 
-    Print(L"--- BIOS INFORMATION (TYPE 0) ---\n");
-
-    smbios_print_string(L"Vendor", string_area, type0->Vendor);
-    smbios_print_string(L"BIOS Version", string_area, type0->BiosVersion);
-    smbios_print_string(L"Release Date", string_area, type0->BiosReleaseDate);
-}
+static CONST CHAR16 *chassis_names[] = {
+    L"Unknown", L"Other", L"Unknown", L"Desktop", L"Low Profile Desktop", L"Pizza Box", L"Mini Tower",
+    L"Tower", L"Portable", L"Laptop", L"Notebook", L"Hand Held", L"Docking Station", L"All in One"
+};
 
 static
 VOID
-smbios_print_type1_system(
+smbios_print_record(
     EFI_SMBIOS_TABLE_HEADER *record
 )
 {
-    SMBIOS_TABLE_TYPE1 *type1 = (SMBIOS_TABLE_TYPE1*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type1->Hdr.Length);
-
-    Print(L"\n--- SYSTEM INFORMATION (TYPE 1) ---\n");
-
-    smbios_print_string(L"Manufacturer", string_area, type1->Manufacturer);
-    smbios_print_string(L"Product Name", string_area, type1->ProductName);
-    smbios_print_string(L"Version", string_area, type1->Version);
-    smbios_print_string(L"Serial Number", string_area, type1->SerialNumber);
-
-    Print(L"UUID: %g\n", &type1->Uuid);
-}
-
-static
-VOID
-smbios_print_type2_baseboard(
-    EFI_SMBIOS_TABLE_HEADER *record
-)
-{
-    SMBIOS_TABLE_TYPE2 *type2 = (SMBIOS_TABLE_TYPE2*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type2->Hdr.Length);
-
-    Print(L"\n--- BASEBOARD INFORMATION (TYPE 2) ---\n");
-
-    smbios_print_string(L"Mainboard Manufacturer", string_area, type2->Manufacturer);
-    smbios_print_string(L"Product Name", string_area, type2->ProductName);
-    smbios_print_string(L"Version", string_area, type2->Version);
-    smbios_print_string(L"Serial Number", string_area, type2->SerialNumber);
-}
-
-static
-CONST CHAR16*
-chassis_type_to_string(
-    UINT8 type
-)
-{
-    switch (type & 0x7F)
+    switch (record->Type)
     {
-        case 0x01: return L"Other";
-        case 0x02: return L"Unknown";
-        case 0x03: return L"Desktop";
-        case 0x04: return L"Low Profile Desktop";
-        case 0x06: return L"Mini Tower";
-        case 0x07: return L"Tower";
-        case 0x08: return L"Portable";
-        case 0x09: return L"Laptop";
-        case 0x0A: return L"Notebook";
-        case 0x0D: return L"All in One";
-        case 0x1F: return L"Convertible";
-        default:   return L"Unknown";
-    }
-}
-
-static
-VOID
-smbios_print_type3_mechanical(
-    EFI_SMBIOS_TABLE_HEADER *record
-)
-{
-    SMBIOS_TABLE_TYPE3 *type3 = (SMBIOS_TABLE_TYPE3*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type3->Hdr.Length);
-
-    Print(L"\n--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
-
-    smbios_print_string(L"Manufacturer", string_area, type3->Manufacturer);
-    Print(L"Chassis Type: %s (0x%02x)\n", chassis_type_to_string(type3->Type), type3->Type & 0x7F);
-    smbios_print_string(L"Serial Number", string_area, type3->SerialNumber);
-    smbios_print_string(L"Version", string_area, type3->Version);
-}
-
-static
-VOID
-smbios_print_type4_processor(
-    EFI_SMBIOS_TABLE_HEADER *record
-)
-{
-    SMBIOS_TABLE_TYPE4 *type4 = (SMBIOS_TABLE_TYPE4*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type4->Hdr.Length);
-
-    Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
-
-    smbios_print_string(L"Manufacturer", string_area, type4->ProcessorManufacturer);
-    smbios_print_string(L"Version", string_area, type4->ProcessorVersion);
-
-    UINT16 cores = type4->CoreCount;
-    UINT16 threads = type4->ThreadCount;
-
-    if (type4->Hdr.Length >= 0x30)
+    case SMBIOS_TYPE_BIOS_INFORMATION: 
     {
-        if (cores == 0xFF)   { cores = type4->CoreCount2; }
-        if (threads == 0xFF) { threads = type4->ThreadCount2; }
+        SMBIOS_TABLE_TYPE0 *t = (SMBIOS_TABLE_TYPE0*)record;
+
+        Print(L"--- BIOS INFORMATION (TYPE 0) ---\n");
+        print_str(L"Vendor", Vendor);
+        print_str(L"BIOS Version", BiosVersion);
+        print_str(L"Release Date", BiosReleaseDate);
+        break;
     }
+    case SMBIOS_TYPE_SYSTEM_INFORMATION:
+    {
+        SMBIOS_TABLE_TYPE1 *t = (SMBIOS_TABLE_TYPE1*)record;
 
-    Print(L"Core Count: %u\n", cores);
-    Print(L"Thread Count: %u\n", threads);
-}
-
-static
-VOID
-smbios_print_type17_memory(
-    EFI_SMBIOS_TABLE_HEADER *record
-)
-{
-    SMBIOS_TABLE_TYPE17 *type17 = (SMBIOS_TABLE_TYPE17*)record;
-    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type17->Hdr.Length);
-
-    if (type17->Size == 0) {
-        return;
+        Print(L"\n--- SYSTEM INFORMATION (TYPE 1) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
+        print_str(L"Product Name", ProductName);
+        print_str(L"Version", Version);
+        print_str(L"Serial Number", SerialNumber);
+        Print(L"UUID: %g\n", &t->Uuid);
+        break;
     }
+    case SMBIOS_TYPE_BASEBOARD_INFORMATION:
+    {
+        SMBIOS_TABLE_TYPE2 *t = (SMBIOS_TABLE_TYPE2*)record;
 
-    UINT32 size_mb = type17->Size;
-    if (type17->Size == 0x7FFF) {
-        size_mb = type17->ExtendedSize & 0x7FFFFFFF;
+        Print(L"\n--- BASEBOARD INFORMATION (TYPE 2) ---\n");
+        print_str(L"Mainboard Manufacturer", Manufacturer);
+        print_str(L"Product Name", ProductName);
+        print_str(L"Version", Version);
+        print_str(L"Serial Number", SerialNumber);
+        break;
     }
+    case SMBIOS_TYPE_SYSTEM_ENCLOSURE: 
+    {
+        SMBIOS_TABLE_TYPE3 *t = (SMBIOS_TABLE_TYPE3*)record;
+        UINT8 type = t->Type & 0x7F;
 
-    Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+        Print(L"\n--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
+        Print(L"Chassis Type: %s (0x%02x)\n", type < ARRAY_SIZE(chassis_names) ? chassis_names[type] : L"Unknown", type);
+        print_str(L"Serial Number", SerialNumber);
+        print_str(L"Version", Version);
+        break;
+    }
+    case SMBIOS_TYPE_PROCESSOR_INFORMATION:
+    {
+        SMBIOS_TABLE_TYPE4 *t = (SMBIOS_TABLE_TYPE4*)record;
+        UINT16 cores = t->CoreCount, threads = t->ThreadCount;
+        
+        if (cores == 0xFF && t->Hdr.Length >= 0x30) { cores = t->CoreCount2; }
+        if (threads == 0xFF && t->Hdr.Length >= 0x30) { threads = t->ThreadCount2; }
+        
+        Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+        print_str(L"Manufacturer", ProcessorManufacturer);
+        print_str(L"Version", ProcessorVersion);
+        Print(L"Core Count: %u\nThread Count: %u\n", cores, threads);
+        break;
+    }
+    case SMBIOS_TYPE_MEMORY_DEVICE: 
+    {
+        SMBIOS_TABLE_TYPE17 *t = (SMBIOS_TABLE_TYPE17*)record;
+       
+        if (t->Size == 0) {
+            break;
+        }
 
-    smbios_print_string(L"Manufacturer", string_area, type17->Manufacturer);
-    Print(L"Size: %u MB\n", size_mb);
-    Print(L"Speed: %u MT/s\n", type17->Speed);
-    smbios_print_string(L"Part Number", string_area, type17->PartNumber);
+        Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
+        Print(L"Size: %u MB\n", t->Size == 0x7FFF ? t->ExtendedSize & 0x7FFFFFFF : t->Size);
+        Print(L"Speed: %u MT/s\n", t->Speed);
+        print_str(L"Part Number", PartNumber);
+        break;
+    }
+    }
 }
 
 EFI_STATUS
@@ -166,71 +113,20 @@ smbios_print_info(
 )
 {
     EFI_SMBIOS_PROTOCOL *smbios;
-    EFI_STATUS status = gBS->LocateProtocol(
-        &gEfiSmbiosProtocolGuid,
-        NULL,
-        (VOID**)&smbios
-    );
+    EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
 
-    if (EFI_ERROR(status)) 
+    if (EFI_ERROR(status))
     {
-        DEBUG((
-            DEBUG_ERROR,
-            "Couldn't locate SMBIOS protocol: %r\n",
-            status
-            ));
-
+        DEBUG((DEBUG_ERROR, "Couldn't locate SMBIOS protocol: %r\n", status));
         return status;
     }
 
-    EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
     EFI_SMBIOS_TABLE_HEADER *record;
+    EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
 
-    while (TRUE) 
-    {
-        status = smbios->GetNext(
-            smbios,
-            &handle,
-            NULL,
-            &record,
-            NULL
-        );
-
-        if (status == EFI_NOT_FOUND) {
-            break;
-        }
-
-        if (EFI_ERROR(status)) {
-            return status;
-        }
-
-        switch (record->Type) 
-        {
-        case SMBIOS_TYPE_BIOS_INFORMATION:
-            smbios_print_type0_bios(record);
-            break;
-
-        case SMBIOS_TYPE_SYSTEM_INFORMATION:
-            smbios_print_type1_system(record);
-            break;
-
-        case SMBIOS_TYPE_BASEBOARD_INFORMATION:
-            smbios_print_type2_baseboard(record);
-            break;
-        case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
-            smbios_print_type3_mechanical(record);
-            break;
-        case SMBIOS_TYPE_PROCESSOR_INFORMATION:
-            smbios_print_type4_processor(record);
-            break;
-        case SMBIOS_TYPE_MEMORY_DEVICE:
-            smbios_print_type17_memory(record);
-            break;
-
-        default:
-            break;
-        }
+    while (!EFI_ERROR(status = smbios->GetNext(smbios, &handle, NULL, &record, NULL))) {
+        smbios_print_record(record);
     }
 
-    return EFI_SUCCESS;
+    return status == EFI_NOT_FOUND ? EFI_SUCCESS : status;
 }

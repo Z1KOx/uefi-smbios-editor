@@ -7,18 +7,14 @@
 #define UTILS_H
 
 #include <Uefi.h>
-
-CHAR8*
-smbios_get_string(
-    CHAR8 *string_area,
-    UINT8 string_index
-);
+#include <Protocol/Smbios.h>
+#include <IndustryStandard/SmBios.h>
 
 VOID
 smbios_print_string(
-    CONST CHAR16* label,
-    CHAR8*        string_area,
-    UINT8         string_index
+    CONST CHAR16            *label,
+    EFI_SMBIOS_TABLE_HEADER *record,
+    UINT8                   string_index
 );
 
 #endif

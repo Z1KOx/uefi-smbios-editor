@@ -93,7 +93,7 @@ chassis_type_to_string(
 static
 VOID
 smbios_print_type3_mechanical(
-    EFI_SMBIOS_TABLE_HEADER* record
+    EFI_SMBIOS_TABLE_HEADER *record
 )
 {
     SMBIOS_TABLE_TYPE3* type3 = (SMBIOS_TABLE_TYPE3*)record;
@@ -105,6 +105,33 @@ smbios_print_type3_mechanical(
     Print(L"Chassis Type: %s (0x%02x)\n", chassis_type_to_string(type3->Type), type3->Type & 0x7F);
     smbios_print_string(L"Serial Number", string_area, type3->SerialNumber);
     smbios_print_string(L"Version", string_area, type3->Version);
+}
+
+static
+VOID
+smbios_print_type4_processor(
+    EFI_SMBIOS_TABLE_HEADER *record
+)
+{
+    SMBIOS_TABLE_TYPE4* type4 = (SMBIOS_TABLE_TYPE4*)record;
+    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type4->Hdr.Length);
+
+    Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+
+    smbios_print_string(L"Manufacturer", string_area, type4->ProcessorManufacturer);
+    smbios_print_string(L"Version", string_area, type4->ProcessorVersion);
+
+    UINT16 cores = type4->CoreCount;
+    UINT16 threads = type4->ThreadCount;
+
+    if (type4->Hdr.Length >= 0x30)
+    {
+        if (cores == 0xFF)   { cores = type4->CoreCount2; }
+        if (threads == 0xFF) { threads = type4->ThreadCount2; }
+    }
+
+    Print(L"Core Count: %u\n", cores);
+    Print(L"Thread Count: %u\n", threads);
 }
 
 EFI_STATUS
@@ -166,6 +193,9 @@ smbios_print_info(
             break;
         case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
             smbios_print_type3_mechanical(record);
+            break;
+        case SMBIOS_TYPE_PROCESSOR_INFORMATION:
+            smbios_print_type4_processor(record);
             break;
 
         default:

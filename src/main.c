@@ -5,9 +5,8 @@
 
 #include <Uefi.h>
 #include <Library/UefiLib.h>
-#include <Library/DebugLib.h>
 
-#include "smbios.h"
+#include "console.h"
 
 EFI_STATUS
 EFIAPI
@@ -16,20 +15,7 @@ UefiMain(
     IN EFI_SYSTEM_TABLE *system_table
 )
 {
-    EFI_STATUS status;
-
-    status = smbios_print_info();
-
-    if (EFI_ERROR(status)) 
-    {
-        DEBUG((
-            DEBUG_ERROR,
-            "Failed to read SMBIOS information: %r\n",
-            status
-            ));
-
-        return status;
-    }
+    run_console();
 
     return EFI_SUCCESS;
 }

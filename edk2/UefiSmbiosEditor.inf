@@ -10,6 +10,8 @@
   ENTRY_POINT                    = UefiMain
 
 [Sources]
+  console.c
+  console.h
   main.c
   smbios.c
   smbios.h
@@ -24,6 +26,8 @@
   UefiBootServicesTableLib
   UefiLib
   DebugLib
+  BaseLib
+  BaseMemoryLib
 
 [Protocols]
   gEfiSmbiosProtocolGuid

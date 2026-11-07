@@ -1,3 +1,6 @@
+## Copyright (c) 2026, Z1KOx. All rights reserved.
+## SPDX-License-Identifier: BSD-2-Clause
+
 [Defines]
   PLATFORM_NAME                  = UefiSmbiosEditor
   PLATFORM_GUID                  = 7D4A9C21-8E63-4F52-A1B7-93D6E5C8204F

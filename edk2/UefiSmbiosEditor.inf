@@ -1,4 +1,5 @@
-## SPDX-License-Identifier: BSD-2-Clause-Patent
+## Copyright (c) 2026, Z1KOx. All rights reserved.
+## SPDX-License-Identifier: BSD-2-Clause
 
 [Defines]
   INF_VERSION                    = 0x0001001B
@@ -11,7 +12,9 @@
 [Sources]
   main.c
   smbios.c
+  smbios.h
   utils.c
+  utils.h
 
 [Packages]
   MdePkg/MdePkg.dec

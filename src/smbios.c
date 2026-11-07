@@ -1,5 +1,6 @@
 /**
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  Copyright (c) 2026, Z1KOx. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause
 **/
 
 #include <Uefi.h>

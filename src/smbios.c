@@ -96,10 +96,10 @@ smbios_print_type3_mechanical(
     EFI_SMBIOS_TABLE_HEADER *record
 )
 {
-    SMBIOS_TABLE_TYPE3* type3 = (SMBIOS_TABLE_TYPE3*)record;
+    SMBIOS_TABLE_TYPE3 *type3 = (SMBIOS_TABLE_TYPE3*)record;
     CHAR8 *string_area = (CHAR8*)((UINT8*)record + type3->Hdr.Length);
 
-    Print(L"\n--- MECHANICAL ENCLOSURE INFORMATION (TYPE 3) ---\n");
+    Print(L"\n--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
 
     smbios_print_string(L"Manufacturer", string_area, type3->Manufacturer);
     Print(L"Chassis Type: %s (0x%02x)\n", chassis_type_to_string(type3->Type), type3->Type & 0x7F);
@@ -113,7 +113,7 @@ smbios_print_type4_processor(
     EFI_SMBIOS_TABLE_HEADER *record
 )
 {
-    SMBIOS_TABLE_TYPE4* type4 = (SMBIOS_TABLE_TYPE4*)record;
+    SMBIOS_TABLE_TYPE4 *type4 = (SMBIOS_TABLE_TYPE4*)record;
     CHAR8 *string_area = (CHAR8*)((UINT8*)record + type4->Hdr.Length);
 
     Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
@@ -132,6 +132,32 @@ smbios_print_type4_processor(
 
     Print(L"Core Count: %u\n", cores);
     Print(L"Thread Count: %u\n", threads);
+}
+
+static
+VOID
+smbios_print_type17_memory(
+    EFI_SMBIOS_TABLE_HEADER *record
+)
+{
+    SMBIOS_TABLE_TYPE17 *type17 = (SMBIOS_TABLE_TYPE17*)record;
+    CHAR8 *string_area = (CHAR8*)((UINT8*)record + type17->Hdr.Length);
+
+    if (type17->Size == 0) {
+        return;
+    }
+
+    UINT32 size_mb = type17->Size;
+    if (type17->Size == 0x7FFF) {
+        size_mb = type17->ExtendedSize & 0x7FFFFFFF;
+    }
+
+    Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+
+    smbios_print_string(L"Manufacturer", string_area, type17->Manufacturer);
+    Print(L"Size: %u MB\n", size_mb);
+    Print(L"Speed: %u MT/s\n", type17->Speed);
+    smbios_print_string(L"Part Number", string_area, type17->PartNumber);
 }
 
 EFI_STATUS
@@ -158,7 +184,7 @@ smbios_print_info(
     }
 
     EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
-    EFI_SMBIOS_TABLE_HEADER* record;
+    EFI_SMBIOS_TABLE_HEADER *record;
 
     while (TRUE) 
     {
@@ -196,6 +222,9 @@ smbios_print_info(
             break;
         case SMBIOS_TYPE_PROCESSOR_INFORMATION:
             smbios_print_type4_processor(record);
+            break;
+        case SMBIOS_TYPE_MEMORY_DEVICE:
+            smbios_print_type17_memory(record);
             break;
 
         default:

@@ -18,6 +18,15 @@ if not exist "%QEMU%" (
     exit /b 1
 )
 
+"%QEMU%" -machine help 2>&1 | findstr /i /c:"pc-q35-9.0" >nul
+if errorlevel 1 (
+    echo ERROR: This QEMU build does not provide pc-q35-9.0.
+    echo Run this command to list available machine types:
+    echo   "%QEMU%" -machine help
+    pause
+    exit /b 1
+)
+
 if not exist "%OVMF%" (
     echo ERROR: OVMF firmware not found: %OVMF%
     echo.
@@ -45,10 +54,8 @@ del /q "%SHARE%\*.efi" >nul 2>&1
 
 copy /Y "%EFI%" "%SHARE%\uefismbios.efi" >nul
 
-REM startup.nsh runs automatically in the UEFI Shell at every boot and re-applies the saved values
 >"%SHARE%\startup.nsh" echo fs0:\uefismbios.efi /apply
 
-REM The NVRAM file must survive between QEMU runs (delete it to wipe all saved values)
 if not exist "%VARS%" copy /Y "%FV%\OVMF_VARS.fd" "%VARS%" >nul
 
 if errorlevel 1 (
@@ -68,7 +75,7 @@ echo.
 
 cd /d "%PROJECT%"
 
-set ARGS=-machine q35 -cpu Nehalem -smp 12,sockets=1,cores=6,threads=2 -m 32G
+set ARGS=-machine pc-q35-9.0 -cpu Nehalem -smp 12,sockets=1,cores=6,threads=2 -m 32G
 set ARGS=%ARGS% -drive "if=pflash,format=raw,unit=0,readonly=on,file=%OVMF%"
 set ARGS=%ARGS% -drive "if=pflash,format=raw,unit=1,file=%VARS%"
 set ARGS=%ARGS% -smbios type=0,vendor="American Megatrends International,, LLC.",version="1811",date="08/15/2024",release=18.11,uefi=on
@@ -76,8 +83,7 @@ set ARGS=%ARGS% -smbios type=1,manufacturer="ASUS",product="TUF GAMING B650-PLUS
 set ARGS=%ARGS% -smbios type=2,manufacturer="ASUSTeK COMPUTER INC.",product="TUF GAMING B650-PLUS WIFI",version="Rev 1.xx",serial="MB-B650-001",asset="ASUS-MB-001",location="Mainboard"
 set ARGS=%ARGS% -smbios type=3,manufacturer="Fractal Design",version="Pop Air Black",serial="FD-CASE-001",asset="CASE-001",sku="FD-C-POA1A-01"
 set ARGS=%ARGS% -smbios type=4,sock_pfx="AM5",manufacturer="Advanced Micro Devices,, Inc.",version="AMD Ryzen 5 7600 6-Core Processor",serial="AMD-7600-001",asset="CPU-001",part="100-100001015BOX"
-set ARGS=%ARGS% -smbios type=17,loc_pfx="DIMM",bank="BANK 0",manufacturer="Corsair",serial="COR-RAM-001",asset="RAM-001",part="CMK32GX5M2B6000C36",speed=6000
-set ARGS=%ARGS% -smbios type=17,loc_pfx="DIMM",bank="BANK 1",manufacturer="Corsair",serial="COR-RAM-002",asset="RAM-002",part="CMK32GX5M2B6000C36",speed=6000
+set ARGS=%ARGS% -smbios type=17,loc_pfx="DIMM",bank="BANK",manufacturer="Corsair",serial="COR-RAM",asset="RAM",part="CMK32GX5M2B6000C36",speed=6000
 set ARGS=%ARGS% -smbios type=11,value="ASUS TUF Gaming",value="AMD Ryzen Gaming System",value="MSI GeForce RTX 4070 SUPER",value="Samsung 990 PRO 1TB",value="Corsair Vengeance DDR5"
 set ARGS=%ARGS% -drive "file=fat:rw:%SHARE%,format=raw"
 set ARGS=%ARGS% -debugcon file:build\qemu-ovmf-debug.log

@@ -21,19 +21,66 @@
 
 static EFI_GUID var_guid = { 0x3f1c9a52, 0x6b7d, 0x4e08,{ 0x9a, 0xd1, 0x52, 0xc4, 0x7e, 0x80, 0xb3, 0x16 } };
 
-typedef struct {
+typedef struct 
+{
     CONST CHAR8 *path;
-    UINT8       type;
-    UINT8       offset;
+    UINT8        type;
+    UINT8        offset;
+    UINT8        instance;
 } FIELD;
 
-static CONST FIELD fields[] = {
-    { "smbios.bios.vendor",         SMBIOS_TYPE_BIOS_INFORMATION,      OFFSET_OF(SMBIOS_TABLE_TYPE0, Vendor) },
-    { "smbios.bios.version",        SMBIOS_TYPE_BIOS_INFORMATION,      OFFSET_OF(SMBIOS_TABLE_TYPE0, BiosVersion) },
-    { "smbios.system.manufacturer", SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, Manufacturer) },
-    { "smbios.system.product",      SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, ProductName) },
-    { "smbios.system.serial",       SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, SerialNumber) },
-    { "smbios.baseboard.serial",    SMBIOS_TYPE_BASEBOARD_INFORMATION, OFFSET_OF(SMBIOS_TABLE_TYPE2, SerialNumber) },
+#define FIELD_ENTRY(Path, Type, Structure, Member) { Path, Type, OFFSET_OF(Structure, Member), 0 }
+
+#define FIELD_ENTRY_INSTANCE(Path, Type, Structure, Member, Instance) { Path, Type, OFFSET_OF(Structure, Member), Instance }
+
+#define MEMORY_FIELDS(Slot, Instance) \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].device_locator", SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, DeviceLocator, Instance), \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].bank_locator",   SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, BankLocator,   Instance), \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].manufacturer",   SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, Manufacturer,  Instance), \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].serial",         SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, SerialNumber,  Instance), \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].asset_tag",      SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, AssetTag,      Instance), \
+    FIELD_ENTRY_INSTANCE("smbios.memory[" #Slot "].part_number",    SMBIOS_TYPE_MEMORY_DEVICE, SMBIOS_TABLE_TYPE17, PartNumber,    Instance)
+
+static CONST FIELD fields[] = 
+{
+    /* Type 0: BIOS Information */
+    FIELD_ENTRY("smbios.bios.vendor",      SMBIOS_TYPE_BIOS_INFORMATION, SMBIOS_TABLE_TYPE0, Vendor),
+    FIELD_ENTRY("smbios.bios.version",     SMBIOS_TYPE_BIOS_INFORMATION, SMBIOS_TABLE_TYPE0, BiosVersion),
+    FIELD_ENTRY("smbios.bios.release_date",SMBIOS_TYPE_BIOS_INFORMATION, SMBIOS_TABLE_TYPE0, BiosReleaseDate),
+
+    /* Type 1: System Information */
+    FIELD_ENTRY("smbios.system.manufacturer", SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, Manufacturer),
+    FIELD_ENTRY("smbios.system.product",      SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, ProductName),
+    FIELD_ENTRY("smbios.system.version",      SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, Version),
+    FIELD_ENTRY("smbios.system.serial",       SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, SerialNumber),
+    FIELD_ENTRY("smbios.system.sku",          SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, SKUNumber),
+    FIELD_ENTRY("smbios.system.family",       SMBIOS_TYPE_SYSTEM_INFORMATION, SMBIOS_TABLE_TYPE1, Family),
+
+    /* Type 2: Baseboard Information */
+    FIELD_ENTRY("smbios.baseboard.manufacturer", SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, Manufacturer),
+    FIELD_ENTRY("smbios.baseboard.product",      SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, ProductName),
+    FIELD_ENTRY("smbios.baseboard.version",      SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, Version),
+    FIELD_ENTRY("smbios.baseboard.serial",       SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, SerialNumber),
+    FIELD_ENTRY("smbios.baseboard.asset_tag",    SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, AssetTag),
+    FIELD_ENTRY("smbios.baseboard.location",     SMBIOS_TYPE_BASEBOARD_INFORMATION, SMBIOS_TABLE_TYPE2, LocationInChassis),
+
+    /* Type 3: Chassis Information */
+    FIELD_ENTRY("smbios.chassis.manufacturer", SMBIOS_TYPE_SYSTEM_ENCLOSURE, SMBIOS_TABLE_TYPE3, Manufacturer),
+    FIELD_ENTRY("smbios.chassis.version",      SMBIOS_TYPE_SYSTEM_ENCLOSURE, SMBIOS_TABLE_TYPE3, Version),
+    FIELD_ENTRY("smbios.chassis.serial",       SMBIOS_TYPE_SYSTEM_ENCLOSURE, SMBIOS_TABLE_TYPE3, SerialNumber),
+    FIELD_ENTRY("smbios.chassis.asset_tag",    SMBIOS_TYPE_SYSTEM_ENCLOSURE, SMBIOS_TABLE_TYPE3, AssetTag),
+
+    /* Type 4: Processor Information (first processor record) */
+    FIELD_ENTRY("smbios.processor.socket",       SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, Socket),
+    FIELD_ENTRY("smbios.processor.manufacturer",SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, ProcessorManufacturer),
+    FIELD_ENTRY("smbios.processor.version",     SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, ProcessorVersion),
+    FIELD_ENTRY("smbios.processor.serial",      SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, SerialNumber),
+    FIELD_ENTRY("smbios.processor.asset_tag",   SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, AssetTag),
+    FIELD_ENTRY("smbios.processor.part_number", SMBIOS_TYPE_PROCESSOR_INFORMATION, SMBIOS_TABLE_TYPE4, PartNumber),
+
+    /* Type 17: Memory Device Information (two records in this QEMU setup) */
+    MEMORY_FIELDS(0, 0),
+    MEMORY_FIELDS(1, 1),
 };
 
 static
@@ -63,6 +110,8 @@ smbios_print_record(
         print_str(L"Product Name", ProductName);
         print_str(L"Version", Version);
         print_str(L"Serial Number", SerialNumber);
+        print_str(L"SKU", SKUNumber);
+        print_str(L"Family", Family);
         Print(L"UUID: %g\n", &t->Uuid);
         break;
     }
@@ -75,6 +124,8 @@ smbios_print_record(
         print_str(L"Product Name", ProductName);
         print_str(L"Version", Version);
         print_str(L"Serial Number", SerialNumber);
+        print_str(L"Asset Tag", AssetTag);
+        print_str(L"Location", LocationInChassis);
         break;
     }
     case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
@@ -87,6 +138,7 @@ smbios_print_record(
         Print(L"Chassis Type: %s (0x%02x)\n", smbios_chassis_name(type), type);
         print_str(L"Serial Number", SerialNumber);
         print_str(L"Version", Version);
+        print_str(L"Asset Tag", AssetTag);
         break;
     }
     case SMBIOS_TYPE_PROCESSOR_INFORMATION:
@@ -98,8 +150,12 @@ smbios_print_record(
         if (threads == 0xFF && t->Hdr.Length >= 0x30) { threads = t->ThreadCount2; }
 
         Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+        print_str(L"Socket", Socket);
         print_str(L"Manufacturer", ProcessorManufacturer);
         print_str(L"Version", ProcessorVersion);
+        print_str(L"Serial Number", SerialNumber);
+        print_str(L"Asset Tag", AssetTag);
+        print_str(L"Part Number", PartNumber);
         Print(L"Core Count: %u\nThread Count: %u\n", cores, threads);
         break;
     }
@@ -107,15 +163,15 @@ smbios_print_record(
     {
         SMBIOS_TABLE_TYPE17 *t = (SMBIOS_TABLE_TYPE17*)record;
 
-        if (t->Size == 0) {
-            break;
-        }
-
         Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+        print_str(L"Device Locator", DeviceLocator);
+        print_str(L"Bank Locator", BankLocator);
         print_str(L"Manufacturer", Manufacturer);
+        print_str(L"Serial Number", SerialNumber);
+        print_str(L"Asset Tag", AssetTag);
+        print_str(L"Part Number", PartNumber);
         Print(L"Size: %u MB\n", t->Size == 0x7FFF ? t->ExtendedSize & 0x7FFFFFFF : t->Size);
         Print(L"Speed: %u MT/s\n", t->Speed);
-        print_str(L"Part Number", PartNumber);
         break;
     }
     }
@@ -153,18 +209,30 @@ update_field(
     CHAR8               *value
 )
 {
-    EFI_SMBIOS_TABLE_HEADER *record;
+    EFI_SMBIOS_TABLE_HEADER *record = NULL;
     EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
     EFI_SMBIOS_TYPE type = field->type;
-    EFI_STATUS status = smbios->GetNext(smbios, &handle, &type, &record, NULL);
+    EFI_STATUS status;
 
-    if (EFI_ERROR(status)) {
-        return status;
+    for (UINTN instance = 0; instance <= field->instance; instance++)
+    {
+        status = smbios->GetNext(
+            smbios, &handle, &type, &record, NULL
+        );
+
+        if (EFI_ERROR(status)) {
+            return status;
+        }
+    }
+
+    if (field->offset >= record->Length) {
+        return EFI_UNSUPPORTED;
     }
 
     UINTN index = *((UINT8*)record + field->offset);
 
-    return smbios->UpdateString(smbios, &handle, &index, value);
+    status = smbios->UpdateString(smbios, &handle, &index, value);
+    return status;
 }
 
 EFI_STATUS
@@ -212,7 +280,19 @@ smbios_reset(
 
     UnicodeSPrint(name, sizeof(name), L"%a", path);
 
-    return gRT->SetVariable(name, &var_guid, 0, 0, NULL);
+    EFI_STATUS status = gRT->SetVariable(
+        name,
+        &var_guid,
+        0,
+        0,
+        NULL
+    );
+
+    if (status == EFI_NOT_FOUND) {
+        return EFI_SUCCESS;
+    }
+
+    return status;
 }
 
 EFI_STATUS
@@ -222,7 +302,7 @@ smbios_apply(
 {
     EFI_SMBIOS_PROTOCOL *smbios;
     CHAR16 name[64];
-    CHAR8  value[66];
+    CHAR8  value[256];
     EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
 
     if (EFI_ERROR(status)) {
@@ -231,7 +311,7 @@ smbios_apply(
 
     for (UINTN i = 0; i < ARRAY_SIZE(fields); i++)
     {
-        UINTN size = sizeof(value) - 1;
+        UINTN size = sizeof(value);
 
         SetMem(value, sizeof(value), 0);
         UnicodeSPrint(name, sizeof(name), L"%a", fields[i].path);

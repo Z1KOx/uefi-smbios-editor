@@ -28,6 +28,9 @@
   DebugLib
   BaseLib
   BaseMemoryLib
+  PrintLib
+  UefiRuntimeServicesTableLib
 
 [Protocols]
   gEfiSmbiosProtocolGuid
+  gEfiShellParametersProtocolGuid

@@ -8,6 +8,10 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/PrintLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <Protocol/Smbios.h>
 #include <IndustryStandard/SmBios.h>
@@ -15,77 +19,22 @@
 #include "smbios.h"
 #include "utils.h"
 
-typedef struct 
-{
-    CONST CHAR16 *label;
-    UINT8        offset;
-} STR_FIELD;
+static EFI_GUID var_guid = { 0x3f1c9a52, 0x6b7d, 0x4e08,{ 0x9a, 0xd1, 0x52, 0xc4, 0x7e, 0x80, 0xb3, 0x16 } };
 
-#define STR(label, type, member) { label, OFFSET_OF(type, member) }
+typedef struct {
+    CONST CHAR8 *path;
+    UINT8       type;
+    UINT8       offset;
+} FIELD;
 
-static CONST STR_FIELD bios_fields[] = 
-{
-    STR(L"Vendor",       SMBIOS_TABLE_TYPE0, Vendor),
-    STR(L"BIOS Version", SMBIOS_TABLE_TYPE0, BiosVersion),
-    STR(L"Release Date", SMBIOS_TABLE_TYPE0, BiosReleaseDate),
+static CONST FIELD fields[] = {
+    { "smbios.bios.vendor",         SMBIOS_TYPE_BIOS_INFORMATION,      OFFSET_OF(SMBIOS_TABLE_TYPE0, Vendor) },
+    { "smbios.bios.version",        SMBIOS_TYPE_BIOS_INFORMATION,      OFFSET_OF(SMBIOS_TABLE_TYPE0, BiosVersion) },
+    { "smbios.system.manufacturer", SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, Manufacturer) },
+    { "smbios.system.product",      SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, ProductName) },
+    { "smbios.system.serial",       SMBIOS_TYPE_SYSTEM_INFORMATION,    OFFSET_OF(SMBIOS_TABLE_TYPE1, SerialNumber) },
+    { "smbios.baseboard.serial",    SMBIOS_TYPE_BASEBOARD_INFORMATION, OFFSET_OF(SMBIOS_TABLE_TYPE2, SerialNumber) },
 };
-
-static CONST STR_FIELD system_fields[] = 
-{
-    STR(L"Manufacturer",  SMBIOS_TABLE_TYPE1, Manufacturer),
-    STR(L"Product Name",  SMBIOS_TABLE_TYPE1, ProductName),
-    STR(L"Version",       SMBIOS_TABLE_TYPE1, Version),
-    STR(L"Serial Number", SMBIOS_TABLE_TYPE1, SerialNumber),
-};
-
-static CONST STR_FIELD baseboard_fields[] =
-{
-    STR(L"Mainboard Manufacturer", SMBIOS_TABLE_TYPE2, Manufacturer),
-    STR(L"Product Name",           SMBIOS_TABLE_TYPE2, ProductName),
-    STR(L"Version",                SMBIOS_TABLE_TYPE2, Version),
-    STR(L"Serial Number",          SMBIOS_TABLE_TYPE2, SerialNumber),
-};
-
-static CONST STR_FIELD enclosure_fields[] = 
-{
-    STR(L"Manufacturer",  SMBIOS_TABLE_TYPE3, Manufacturer),
-    STR(L"Serial Number", SMBIOS_TABLE_TYPE3, SerialNumber),
-    STR(L"Version",       SMBIOS_TABLE_TYPE3, Version),
-};
-
-static CONST STR_FIELD processor_fields[] =
-{
-    STR(L"Manufacturer", SMBIOS_TABLE_TYPE4, ProcessorManufacturer),
-    STR(L"Version",      SMBIOS_TABLE_TYPE4, ProcessorVersion),
-};
-
-static CONST STR_FIELD memory_fields[] =
-{
-    STR(L"Manufacturer", SMBIOS_TABLE_TYPE17, Manufacturer),
-    STR(L"Part Number",  SMBIOS_TABLE_TYPE17, PartNumber),
-};
-
-static CONST CHAR16* chassis_names[] = 
-{
-    L"Unknown", L"Other", L"Unknown", L"Desktop", L"Low Profile Desktop", L"Pizza Box", L"Mini Tower",
-    L"Tower", L"Portable", L"Laptop", L"Notebook", L"Hand Held", L"Docking Station", L"All in One"
-};
-
-static
-VOID
-print_strings(
-    CONST CHAR16            *title,
-    EFI_SMBIOS_TABLE_HEADER *record,
-    CONST STR_FIELD         *fields,
-    UINTN                   count
-)
-{
-    Print(L"\n--- %s ---\n", title);
-
-    for (UINTN i = 0; i < count; i++) {
-        smbios_print_string(fields[i].label, record, *((UINT8*)record + fields[i].offset));
-    }
-}
 
 static
 VOID
@@ -96,28 +45,48 @@ smbios_print_record(
     switch (record->Type)
     {
     case SMBIOS_TYPE_BIOS_INFORMATION:
-        print_strings(L"BIOS INFORMATION (TYPE 0)", record, bios_fields, ARRAY_SIZE(bios_fields));
-        break;
+    {
+        SMBIOS_TABLE_TYPE0 *t = (SMBIOS_TABLE_TYPE0*)record;
 
+        Print(L"--- BIOS INFORMATION (TYPE 0) ---\n");
+        print_str(L"Vendor", Vendor);
+        print_str(L"BIOS Version", BiosVersion);
+        print_str(L"Release Date", BiosReleaseDate);
+        break;
+    }
     case SMBIOS_TYPE_SYSTEM_INFORMATION:
     {
         SMBIOS_TABLE_TYPE1 *t = (SMBIOS_TABLE_TYPE1*)record;
 
-        print_strings(L"SYSTEM INFORMATION (TYPE 1)", record, system_fields, ARRAY_SIZE(system_fields));
+        Print(L"\n--- SYSTEM INFORMATION (TYPE 1) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
+        print_str(L"Product Name", ProductName);
+        print_str(L"Version", Version);
+        print_str(L"Serial Number", SerialNumber);
         Print(L"UUID: %g\n", &t->Uuid);
         break;
     }
     case SMBIOS_TYPE_BASEBOARD_INFORMATION:
-        print_strings(L"BASEBOARD INFORMATION (TYPE 2)", record, baseboard_fields, ARRAY_SIZE(baseboard_fields));
-        break;
+    {
+        SMBIOS_TABLE_TYPE2 *t = (SMBIOS_TABLE_TYPE2*)record;
 
+        Print(L"\n--- BASEBOARD INFORMATION (TYPE 2) ---\n");
+        print_str(L"Mainboard Manufacturer", Manufacturer);
+        print_str(L"Product Name", ProductName);
+        print_str(L"Version", Version);
+        print_str(L"Serial Number", SerialNumber);
+        break;
+    }
     case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
     {
         SMBIOS_TABLE_TYPE3 *t = (SMBIOS_TABLE_TYPE3*)record;
         UINT8 type = t->Type & 0x7F;
 
-        print_strings(L"SYSTEM ENCLOSURE INFORMATION (TYPE 3)", record, enclosure_fields, ARRAY_SIZE(enclosure_fields));
-        Print(L"Chassis Type: %s (0x%02x)\n", type < ARRAY_SIZE(chassis_names) ? chassis_names[type] : L"Unknown", type);
+        Print(L"\n--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
+        Print(L"Chassis Type: %s (0x%02x)\n", smbios_chassis_name(type), type);
+        print_str(L"Serial Number", SerialNumber);
+        print_str(L"Version", Version);
         break;
     }
     case SMBIOS_TYPE_PROCESSOR_INFORMATION:
@@ -128,7 +97,9 @@ smbios_print_record(
         if (cores == 0xFF && t->Hdr.Length >= 0x30) { cores = t->CoreCount2; }
         if (threads == 0xFF && t->Hdr.Length >= 0x30) { threads = t->ThreadCount2; }
 
-        print_strings(L"PROCESSOR INFORMATION (TYPE 4)", record, processor_fields, ARRAY_SIZE(processor_fields));
+        Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+        print_str(L"Manufacturer", ProcessorManufacturer);
+        print_str(L"Version", ProcessorVersion);
         Print(L"Core Count: %u\nThread Count: %u\n", cores, threads);
         break;
     }
@@ -140,9 +111,11 @@ smbios_print_record(
             break;
         }
 
-        print_strings(L"MEMORY DEVICE INFORMATION (TYPE 17)", record, memory_fields, ARRAY_SIZE(memory_fields));
+        Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+        print_str(L"Manufacturer", Manufacturer);
         Print(L"Size: %u MB\n", t->Size == 0x7FFF ? t->ExtendedSize & 0x7FFFFFFF : t->Size);
         Print(L"Speed: %u MT/s\n", t->Speed);
+        print_str(L"Part Number", PartNumber);
         break;
     }
     }
@@ -170,4 +143,103 @@ smbios_print_info(
     }
 
     return status == EFI_NOT_FOUND ? EFI_SUCCESS : status;
+}
+
+static
+EFI_STATUS
+update_field(
+    EFI_SMBIOS_PROTOCOL *smbios,
+    CONST FIELD         *field,
+    CHAR8               *value
+)
+{
+    EFI_SMBIOS_TABLE_HEADER *record;
+    EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
+    EFI_SMBIOS_TYPE type = field->type;
+    EFI_STATUS status = smbios->GetNext(smbios, &handle, &type, &record, NULL);
+
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+
+    UINTN index = *((UINT8*)record + field->offset);
+
+    return smbios->UpdateString(smbios, &handle, &index, value);
+}
+
+EFI_STATUS
+smbios_set(
+    CONST CHAR8 *path,
+    CHAR8       *value
+)
+{
+    EFI_SMBIOS_PROTOCOL *smbios;
+    CHAR16 name[64];
+    EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
+
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+
+    for (UINTN i = 0; i < ARRAY_SIZE(fields); i++)
+    {
+        if (AsciiStrCmp(path, fields[i].path) != 0) {
+            continue;
+        }
+
+        status = update_field(smbios, &fields[i], value);
+
+        if (EFI_ERROR(status)) {
+            return status;
+        }
+
+        UnicodeSPrint(name, sizeof(name), L"%a", path);
+
+        return gRT->SetVariable(name, &var_guid,
+            EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+            AsciiStrSize(value), value);
+    }
+
+    return EFI_NOT_FOUND;
+}
+
+EFI_STATUS
+smbios_reset(
+    CONST CHAR8 *path
+)
+{
+    CHAR16 name[64];
+
+    UnicodeSPrint(name, sizeof(name), L"%a", path);
+
+    return gRT->SetVariable(name, &var_guid, 0, 0, NULL);
+}
+
+EFI_STATUS
+smbios_apply(
+    VOID
+)
+{
+    EFI_SMBIOS_PROTOCOL *smbios;
+    CHAR16 name[64];
+    CHAR8  value[66];
+    EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
+
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+
+    for (UINTN i = 0; i < ARRAY_SIZE(fields); i++)
+    {
+        UINTN size = sizeof(value) - 1;
+
+        SetMem(value, sizeof(value), 0);
+        UnicodeSPrint(name, sizeof(name), L"%a", fields[i].path);
+
+        if (!EFI_ERROR(gRT->GetVariable(name, &var_guid, NULL, &size, value))) {
+            Print(L"Apply %a: %r\n", fields[i].path, update_field(smbios, &fields[i], value));
+        }
+    }
+
+    return EFI_SUCCESS;
 }

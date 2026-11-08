@@ -11,6 +11,38 @@
 #include "console.h"
 #include "smbios.h"
 
+static
+VOID
+handle_command(
+    CONST CHAR16 *buffer
+)
+{
+    CHAR8  line[256];
+    CHAR8 *eq, *end;
+
+    UnicodeStrToAsciiStrS(buffer, line, sizeof(line));
+    
+    if (AsciiStrnCmp(line, "reset ", 6) == 0)
+    {
+        Print(L"%r\n", smbios_reset(line + 6));
+        return;
+    }
+
+    eq = AsciiStrStr(line, " = \"");
+    end = line + AsciiStrLen(line) - 1;
+
+    if (eq == NULL || end <= eq + 4 || *end != '"')
+    {
+        Print(L"Unknown command\n");
+        return;
+    }
+
+    *eq = '\0';
+    *end = '\0';
+
+    Print(L"%r\n", smbios_set(line, eq + 4));
+}
+
 VOID
 EFIAPI
 run_console(
@@ -19,7 +51,7 @@ run_console(
 {
     EFI_INPUT_KEY key;
     EFI_STATUS    status;
-    CHAR16        buffer[64];
+    CHAR16        buffer[256];
     UINTN         index = 0;
 
     SetMem(buffer, sizeof(buffer), 0);
@@ -44,6 +76,9 @@ run_console(
 
                     if (StrCmp(buffer, L"print.smbios") == 0) {
                         smbios_print_info();
+                    }
+                    else if (buffer[0] != L'\0') { // ignore empty lines
+                        handle_command(buffer);
                     }
 
                     SetMem(buffer, sizeof(buffer), 0);

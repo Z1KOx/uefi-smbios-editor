@@ -17,4 +17,11 @@ smbios_print_string(
     UINT8                   string_index
 );
 
+#define print_str(label, member) smbios_print_string(label, record, t->member)
+
+CONST CHAR16*
+smbios_chassis_name(
+    UINT8 type
+);
+
 #endif

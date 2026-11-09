@@ -22,9 +22,9 @@ handle_command(
 
     UnicodeStrToAsciiStrS(buffer, line, sizeof(line));
     
-    if (AsciiStrnCmp(line, "reset ", 6) == 0)
+    if (AsciiStrnCmp(line, "smbios.reset ", 13) == 0)
     {
-        Print(L"%r\n", smbios_reset(line + 6));
+        Print(L"%r\n", smbios_reset(line + 13));
         return;
     }
 
@@ -77,7 +77,7 @@ run_console(
                     if (StrCmp(buffer, L"smbios.print") == 0) {
                         smbios_print_info();
                     }
-                    else if (buffer[0] != L'\0') { // ignore empty lines
+                    else if (buffer[0] != L'\0') { 
                         handle_command(buffer);
                     }
 

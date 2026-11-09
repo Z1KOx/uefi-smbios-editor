@@ -5,6 +5,7 @@
 
 #include <Uefi.h>
 #include <Library/UefiLib.h>
+#include <Library/BaseLib.h>
 
 #include "utils.h"
 
@@ -21,16 +22,29 @@ smbios_print_string(
 )
 {
     CHAR8 *str = (CHAR8*)record + record->Length;
+    UINTN remaining = 4096;
+    UINTN length;
 
     if (string_index == 0) {
         return;
     }
 
-    while (--string_index && *str) {
-        while (*str++) {}
+    while (string_index > 1)
+    {
+        length = AsciiStrnLenS(str, remaining);
+
+        if (length == 0 || length >= remaining) {
+            return;
+        }
+
+        str += length + 1;
+        remaining -= length + 1;
+        string_index--;
     }
 
-    if (*str) {
+    length = AsciiStrnLenS(str, remaining);
+
+    if (length > 0 && length < remaining) {
         Print(L"%s: %a\n", label, str);
     }
 }

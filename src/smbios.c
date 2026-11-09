@@ -182,20 +182,64 @@ smbios_print_info(
     VOID
 )
 {
-    EFI_SMBIOS_PROTOCOL *smbios;
-    EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
+    EFI_SMBIOS_PROTOCOL     *smbios;
+    EFI_SMBIOS_TABLE_HEADER *record;
+    EFI_SMBIOS_HANDLE       handle = SMBIOS_HANDLE_PI_RESERVED;
+    EFI_INPUT_KEY           key;
+    EFI_STATUS              status;
+    UINTN                   event_index;
 
-    if (EFI_ERROR(status))
-    {
-        DEBUG((DEBUG_ERROR, "Couldn't locate SMBIOS protocol: %r\n", status));
+    status = gBS->LocateProtocol(
+        &gEfiSmbiosProtocolGuid,
+        NULL,
+        (VOID**)&smbios
+    );
+
+    if (EFI_ERROR(status)) {
         return status;
     }
 
-    EFI_SMBIOS_TABLE_HEADER *record;
-    EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
+    while (!EFI_ERROR(status = smbios->GetNext(
+        smbios, &handle, NULL, &record, NULL)))
+    {
+        switch (record->Type)
+        {
+            case SMBIOS_TYPE_BIOS_INFORMATION:
+            case SMBIOS_TYPE_SYSTEM_INFORMATION:
+            case SMBIOS_TYPE_BASEBOARD_INFORMATION:
+            case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
+            case SMBIOS_TYPE_PROCESSOR_INFORMATION:
+            case SMBIOS_TYPE_MEMORY_DEVICE:
+            break;
 
-    while (!EFI_ERROR(status = smbios->GetNext(smbios, &handle, NULL, &record, NULL))) {
+            default:
+            continue;
+        }
+
+        gST->ConOut->ClearScreen(gST->ConOut);
         smbios_print_record(record);
+
+        status = gBS->WaitForEvent(
+            1,
+            &gST->ConIn->WaitForKey,
+            &event_index
+        );
+
+        if (EFI_ERROR(status)) {
+            return status;
+        }
+
+        status = gST->ConIn->ReadKeyStroke(
+            gST->ConIn, &key
+        );
+
+        if (EFI_ERROR(status)) {
+            return status;
+        }
+
+        if (key.ScanCode == SCAN_ESC) {
+            return EFI_SUCCESS;
+        }
     }
 
     return status == EFI_NOT_FOUND ? EFI_SUCCESS : status;

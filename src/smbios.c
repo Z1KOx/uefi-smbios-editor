@@ -184,10 +184,11 @@ smbios_print_info(
     EFI_SMBIOS_TABLE_HEADER *record;
     EFI_SMBIOS_HANDLE        handle = SMBIOS_HANDLE_PI_RESERVED;
     EFI_INPUT_KEY            key;
+    EFI_STATUS               status;
     UINTN                    event_index;
     UINTN                    memory_index = 0;
 
-    EFI_STATUS = status = gBS->LocateProtocol(
+    status = gBS->LocateProtocol(
         &gEfiSmbiosProtocolGuid,
         NULL,
         (VOID**)&smbios
@@ -197,7 +198,8 @@ smbios_print_info(
         return status;
     }
 
-    while (!EFI_ERROR(status = smbios->GetNext(smbios, &handle, NULL, &record, NULL)))
+    while (!EFI_ERROR(status = smbios->GetNext(
+        smbios, &handle, NULL, &record, NULL)))
     {
         switch (record->Type)
         {
@@ -344,6 +346,7 @@ find_field(
     FIELD       *field
 )
 {
+    EFI_STATUS status;
     UINTN instance;
     CONST CHAR8 *member;
 
@@ -363,7 +366,7 @@ find_field(
         }
     }
 
-    EFI_STATUS status = parse_memory_index(path, &instance, &member);
+    status = parse_memory_index(path, &instance, &member);
     if (EFI_ERROR(status)) {
         return status;
     }
@@ -392,8 +395,9 @@ smbios_set(
     EFI_SMBIOS_PROTOCOL *smbios;
     FIELD field;
     CHAR16 name[64];
+    EFI_STATUS status;
 
-    EFI_STATUS status = find_field(path, &field);
+    status = find_field(path, &field);
     if (EFI_ERROR(status)) {
         return status;
     }
@@ -426,8 +430,9 @@ smbios_reset(
 {
     FIELD field;
     CHAR16 name[64];
+    EFI_STATUS status;
 
-    EFI_STATUS status = find_field(path, &field);
+    status = find_field(path, &field);
     if (EFI_ERROR(status)) {
         return status;
     }
@@ -454,11 +459,12 @@ apply_saved_field(
     CHAR16 name[64];
     CHAR8 value[256];
     UINTN size = sizeof(value);
+    EFI_STATUS status;
 
     SetMem(value, sizeof(value), 0);
     UnicodeSPrint(name, sizeof(name), L"%a", path);
 
-    EFI_STATUS status = gRT->GetVariable(name, &var_guid, NULL, &size, value);
+    status = gRT->GetVariable(name, &var_guid, NULL, &size, value);
 
     if (status == EFI_NOT_FOUND) {
         return EFI_SUCCESS;
@@ -509,12 +515,13 @@ smbios_apply(
 )
 {
     EFI_SMBIOS_PROTOCOL *smbios;
+    EFI_STATUS status;
     EFI_STATUS first_error = EFI_SUCCESS;
     UINTN memory_count;
     CHAR8 path[64];
     FIELD field;
 
-    EFI_STATUS status = gBS->LocateProtocol(
+    status = gBS->LocateProtocol(
         &gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios
     );
     if (EFI_ERROR(status)) {

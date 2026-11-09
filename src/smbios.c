@@ -231,8 +231,11 @@ update_field(
 
     UINTN index = *((UINT8*)record + field->offset);
 
-    status = smbios->UpdateString(smbios, &handle, &index, value);
-    return status;
+    if (index == 0) {
+        return EFI_NOT_FOUND;
+    }
+
+    return smbios->UpdateString(smbios, &handle, &index, value);
 }
 
 EFI_STATUS
@@ -277,22 +280,31 @@ smbios_reset(
 )
 {
     CHAR16 name[64];
+    EFI_STATUS status;
 
-    UnicodeSPrint(name, sizeof(name), L"%a", path);
+    for (UINTN i = 0; i < ARRAY_SIZE(fields); i++)
+    {
+        if (AsciiStrCmp(path, fields[i].path) == 0) 
+        {
+            UnicodeSPrint(name, sizeof(name), L"%a", path);
 
-    EFI_STATUS status = gRT->SetVariable(
-        name,
-        &var_guid,
-        0,
-        0,
-        NULL
-    );
+            status = gRT->SetVariable(
+                name,
+                &var_guid,
+                0,
+                0,
+                NULL
+            );
 
-    if (status == EFI_NOT_FOUND) {
-        return EFI_SUCCESS;
+            if (status == EFI_NOT_FOUND) {
+                return EFI_SUCCESS;
+            }
+
+            return status;
+        }
     }
 
-    return status;
+    return EFI_NOT_FOUND;
 }
 
 EFI_STATUS

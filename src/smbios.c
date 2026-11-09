@@ -302,8 +302,15 @@ smbios_apply(
 {
     EFI_SMBIOS_PROTOCOL *smbios;
     CHAR16 name[64];
-    CHAR8  value[256];
-    EFI_STATUS status = gBS->LocateProtocol(&gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios);
+    CHAR8 value[256];
+    EFI_STATUS status;
+    EFI_STATUS first_error = EFI_SUCCESS;
+
+    status = gBS->LocateProtocol(
+        &gEfiSmbiosProtocolGuid,
+        NULL,
+        (VOID**)&smbios
+    );
 
     if (EFI_ERROR(status)) {
         return status;
@@ -316,10 +323,38 @@ smbios_apply(
         SetMem(value, sizeof(value), 0);
         UnicodeSPrint(name, sizeof(name), L"%a", fields[i].path);
 
-        if (!EFI_ERROR(gRT->GetVariable(name, &var_guid, NULL, &size, value))) {
-            Print(L"Apply %a: %r\n", fields[i].path, update_field(smbios, &fields[i], value));
+        status = gRT->GetVariable(
+            name, &var_guid, NULL, &size, value
+        );
+
+        if (status == EFI_NOT_FOUND) {
+            continue;
+        }
+
+        if (EFI_ERROR(status)) 
+        {
+            Print(L"Load %a: %r\n", fields[i].path, status);
+
+            if (!EFI_ERROR(first_error)) {
+                first_error = status;
+            }
+
+            continue;
+        }
+
+        if (size == 0 || size > sizeof(value) || value[size - 1] != '\0') {
+            status = EFI_COMPROMISED_DATA;
+        }
+        else {
+            status = update_field(smbios, &fields[i], value);
+        }
+
+        Print(L"Apply %a: %r\n", fields[i].path, status);
+
+        if (EFI_ERROR(status) && !EFI_ERROR(first_error)) {
+            first_error = status;
         }
     }
 
-    return EFI_SUCCESS;
+    return first_error;
 }

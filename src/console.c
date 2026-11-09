@@ -74,7 +74,7 @@ run_console(
                 {
                     Print(L"\n");
 
-                    if (StrCmp(buffer, L"print.smbios") == 0) {
+                    if (StrCmp(buffer, L"smbios.print") == 0) {
                         smbios_print_info();
                     }
                     else if (buffer[0] != L'\0') { // ignore empty lines

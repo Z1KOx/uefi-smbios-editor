@@ -105,7 +105,7 @@ smbios_print_record(
     {
         SMBIOS_TABLE_TYPE1 *t = (SMBIOS_TABLE_TYPE1*)record;
 
-        Print(L"\n--- SYSTEM INFORMATION (TYPE 1) ---\n");
+        Print(L"--- SYSTEM INFORMATION (TYPE 1) ---\n");
         print_str(L"Manufacturer", Manufacturer);
         print_str(L"Product Name", ProductName);
         print_str(L"Version", Version);
@@ -119,7 +119,7 @@ smbios_print_record(
     {
         SMBIOS_TABLE_TYPE2 *t = (SMBIOS_TABLE_TYPE2*)record;
 
-        Print(L"\n--- BASEBOARD INFORMATION (TYPE 2) ---\n");
+        Print(L"--- BASEBOARD INFORMATION (TYPE 2) ---\n");
         print_str(L"Mainboard Manufacturer", Manufacturer);
         print_str(L"Product Name", ProductName);
         print_str(L"Version", Version);
@@ -133,7 +133,7 @@ smbios_print_record(
         SMBIOS_TABLE_TYPE3 *t = (SMBIOS_TABLE_TYPE3*)record;
         UINT8 type = t->Type & 0x7F;
 
-        Print(L"\n--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
+        Print(L"--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
         print_str(L"Manufacturer", Manufacturer);
         Print(L"Chassis Type: %s (0x%02x)\n", smbios_chassis_name(type), type);
         print_str(L"Serial Number", SerialNumber);
@@ -149,7 +149,7 @@ smbios_print_record(
         if (cores == 0xFF && t->Hdr.Length >= 0x30) { cores = t->CoreCount2; }
         if (threads == 0xFF && t->Hdr.Length >= 0x30) { threads = t->ThreadCount2; }
 
-        Print(L"\n--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+        Print(L"--- PROCESSOR INFORMATION (TYPE 4) ---\n");
         print_str(L"Socket", Socket);
         print_str(L"Manufacturer", ProcessorManufacturer);
         print_str(L"Version", ProcessorVersion);
@@ -163,7 +163,7 @@ smbios_print_record(
     {
         SMBIOS_TABLE_TYPE17 *t = (SMBIOS_TABLE_TYPE17*)record;
 
-        Print(L"\n--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
+        Print(L"--- MEMORY DEVICE INFORMATION (TYPE 17) ---\n");
         print_str(L"Device Locator", DeviceLocator);
         print_str(L"Bank Locator", BankLocator);
         print_str(L"Manufacturer", Manufacturer);

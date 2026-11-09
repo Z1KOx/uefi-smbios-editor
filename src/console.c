@@ -20,7 +20,11 @@ handle_command(
     CHAR8  line[256];
     CHAR8 *eq, *end;
 
-    UnicodeStrToAsciiStrS(buffer, line, sizeof(line));
+    if (UnicodeStrToAsciiStrS(buffer, line, sizeof(line)) != RETURN_SUCCESS)
+    {
+        Print(L"Invalid command\n");
+        return;
+    }
     
     if (AsciiStrnCmp(line, "smbios.reset ", 13) == 0)
     {

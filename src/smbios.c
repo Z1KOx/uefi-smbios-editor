@@ -110,7 +110,9 @@ smbios_print_record(
         print_str(L"Serial Number", SerialNumber);
         print_str(L"SKU", SKUNumber);
         print_str(L"Family", Family);
-        Print(L"UUID: %g\n", &t->Uuid);
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE1, Uuid) + sizeof(t->Uuid)) {
+            Print(L"UUID: %g\n", &t->Uuid);
+        }
         break;
     }
     case SMBIOS_TYPE_BASEBOARD_INFORMATION:
@@ -154,7 +156,12 @@ smbios_print_record(
         print_str(L"Serial Number", SerialNumber);
         print_str(L"Asset Tag", AssetTag);
         print_str(L"Part Number", PartNumber);
-        Print(L"Core Count: %u\nThread Count: %u\n", cores, threads);
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, CoreCount) + sizeof(t->CoreCount)) {
+            Print(L"Cores: %u\n", t->CoreCount);
+        }
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, ThreadCount) + sizeof(t->ThreadCount)) {
+            Print(L"Threads: %u\n", t->ThreadCount);
+        }
         break;
     }
     case SMBIOS_TYPE_MEMORY_DEVICE:
@@ -168,8 +175,40 @@ smbios_print_record(
         print_str(L"Serial Number", SerialNumber);
         print_str(L"Asset Tag", AssetTag);
         print_str(L"Part Number", PartNumber);
-        Print(L"Size: %u MB\n", t->Size == 0x7FFF ? t->ExtendedSize & 0x7FFFFFFF : t->Size);
-        Print(L"Speed: %u MT/s\n", t->Speed);
+
+        // Check if Size exists
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE17, Size) + sizeof(t->Size))
+        {
+            if (t->Size == 0) {
+                Print(L"Size: Not installed\n");
+            }
+            else if (t->Size == 0xFFFF) {
+                Print(L"Size: Unknown\n");
+            }
+            else if (t->Size == 0x7FFF)
+            {
+                if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE17, ExtendedSize) + sizeof(t->ExtendedSize)) {
+                    Print(L"Size: %u MB\n", t->ExtendedSize & 0x7FFFFFFF);
+                }
+            }
+            else if (t->Size & 0x8000) {
+                Print(L"Size: %u KB\n", t->Size & 0x7FFF);
+            }
+            else {
+                Print(L"Size: %u MB\n", t->Size);
+            }
+        }
+
+        // Check if Speed exists
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE17, Speed) + sizeof(t->Speed))
+        {
+            if (t->Speed == 0) {
+                Print(L"Speed: Unknown\n");
+            }
+            else {
+                Print(L"Speed: %u MT/s\n", t->Speed);
+            }
+        }
         break;
     }
     }

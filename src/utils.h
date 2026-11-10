@@ -17,7 +17,14 @@ smbios_print_string(
     UINT8                   string_index
 );
 
-#define print_str(label, member) smbios_print_string(label, record, t->member)
+#define print_str(label, member)                                \
+    do {                                                        \
+        UINTN offset = (UINTN)((UINT8*)&t->member - (UINT8*)t); \
+                                                                \
+        if (offset < record->Length) {                          \
+            smbios_print_string(label, record, t->member);      \
+        }                                                       \
+    } while (0)
 
 CONST CHAR16*
 smbios_chassis_name(

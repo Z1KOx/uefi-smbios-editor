@@ -2,6 +2,14 @@
 
 A simple UEFI application for viewing and editing SMBIOS information, built with EDK II.
 
+## Screenshots
+
+### Main Menu
+![Main Menu](screenshots/main-menu.png)
+
+### Field Actions
+![Field Actions](screenshots/field-actions.png)
+
 ## Features
 
 - Keyboard-driven menu for BIOS, System, Baseboard, Chassis, Processor, and Memory

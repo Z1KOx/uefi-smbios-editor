@@ -450,6 +450,84 @@ find_field(
     return EFI_NOT_FOUND;
 }
 
+// Read the current SMBIOS string for one selected field.
+EFI_STATUS
+smbios_get(
+    CONST CHAR8 *path,
+    CHAR8       *value,
+    UINTN        value_size
+)
+{
+    EFI_SMBIOS_PROTOCOL *smbios;
+    EFI_SMBIOS_TABLE_HEADER *record = NULL;
+    EFI_SMBIOS_HANDLE handle = SMBIOS_HANDLE_PI_RESERVED;
+    EFI_SMBIOS_TYPE type;
+    EFI_STATUS status;
+    FIELD field;
+    UINTN instance = 0;
+    UINTN remaining = 4096;
+    UINTN length;
+    UINT8 string_index;
+    CHAR8 *str;
+
+    if (value == NULL || value_size == 0) {
+        return EFI_INVALID_PARAMETER;
+    }
+    value[0] = '\0';
+
+    status = find_field(path, &field);
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+    status = gBS->LocateProtocol(
+        &gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios
+    );
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+
+    type = field.type;
+    while (TRUE) {
+        status = smbios->GetNext(smbios, &handle, &type, &record, NULL);
+        if (EFI_ERROR(status)) {
+            return status;
+        }
+        if (instance++ == field.instance) {
+            break;
+        }
+    }
+
+    if (field.offset >= record->Length) {
+        return EFI_UNSUPPORTED;
+    }
+    string_index = *((UINT8*)record + field.offset);
+    if (string_index == 0) {
+        return EFI_NOT_FOUND;
+    }
+
+    str = (CHAR8*)record + record->Length;
+    for (UINTN i = 1; i <= string_index; i++) {
+        if (remaining == 0 || *str == '\0') {
+            return EFI_NOT_FOUND;
+        }
+        length = AsciiStrnLenS(str, remaining);
+        if (length >= remaining) {
+            return EFI_COMPROMISED_DATA;
+        }
+        if (i == string_index) {
+            if (length >= value_size) {
+                return EFI_BUFFER_TOO_SMALL;
+            }
+            CopyMem(value, str, length + 1);
+            return EFI_SUCCESS;
+        }
+        str += length + 1;
+        remaining -= length + 1;
+    }
+
+    return EFI_NOT_FOUND;
+}
+
 EFI_STATUS
 smbios_set(
     CONST CHAR8 *path,
@@ -571,6 +649,25 @@ count_memory_records(
     }
 
     return status == EFI_NOT_FOUND ? EFI_SUCCESS : status;
+}
+
+// Expose the existing Type 17 enumeration to the UI.
+EFI_STATUS
+smbios_memory_count(UINTN *count)
+{
+    EFI_SMBIOS_PROTOCOL *smbios;
+    EFI_STATUS status;
+
+    if (count == NULL) {
+        return EFI_INVALID_PARAMETER;
+    }
+    status = gBS->LocateProtocol(
+        &gEfiSmbiosProtocolGuid, NULL, (VOID**)&smbios
+    );
+    if (EFI_ERROR(status)) {
+        return status;
+    }
+    return count_memory_records(smbios, count);
 }
 
 EFI_STATUS

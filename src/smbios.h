@@ -14,6 +14,18 @@ smbios_print_info(
 );
 
 EFI_STATUS
+smbios_get(
+    CONST CHAR8 *path,
+    CHAR8       *value,
+    UINTN        value_size
+);
+
+EFI_STATUS
+smbios_memory_count(
+    UINTN *count
+);
+
+EFI_STATUS
 smbios_set(
     CONST CHAR8 *path,
     CHAR8       *value

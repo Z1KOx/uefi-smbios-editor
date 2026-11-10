@@ -13,6 +13,8 @@
   console.c
   console.h
   main.c
+  ui.c
+  ui.h
   smbios.c
   smbios.h
   utils.c

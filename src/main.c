@@ -9,7 +9,7 @@
 #include <Library/BaseLib.h>
 #include <Protocol/ShellParameters.h>
 
-#include "console.h"
+#include "ui.h"
 #include "smbios.h"
 
 EFI_STATUS
@@ -27,7 +27,5 @@ UefiMain(
         return smbios_apply();
     }
 
-    run_console();
-
-    return EFI_SUCCESS;
+    return run_ui();
 }

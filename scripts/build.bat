@@ -11,7 +11,7 @@ set "OUT=%PROJECT%\build"
 set "LOG=%EDK2%\build_log.txt"
 
 set "PKG_NAME=UefiSmbiosEditor"
-set "EFI_NAME=UefiSmbiosEditor"
+set "EFI_NAME=smeditor"
 set "TOOLCHAIN=VS2026"
 set "ARCH=X64"
 set "BUILDTARGET=DEBUG"

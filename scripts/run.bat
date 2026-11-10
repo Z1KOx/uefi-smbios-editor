@@ -9,7 +9,7 @@ set "QEMU=C:\Program Files\qemu\qemu-system-x86_64.exe"
 set "FV=%EDK2%\Build\OvmfX64\DEBUG_VS2026\FV"
 set "OVMF=%FV%\OVMF_CODE.fd"
 set "VARS=%PROJECT%\build\OVMF_VARS.fd"
-set "EFI=%PROJECT%\build\UefiSmbiosEditor.efi"
+set "EFI=%PROJECT%\build\smeditor.efi"
 set "SHARE=%PROJECT%\build\esp"
 
 if not exist "%QEMU%" (
@@ -52,9 +52,9 @@ if not exist "%SHARE%" mkdir "%SHARE%"
 
 del /q "%SHARE%\*.efi" >nul 2>&1
 
-copy /Y "%EFI%" "%SHARE%\uefismbios.efi" >nul
+copy /Y "%EFI%" "%SHARE%\smeditor.efi" >nul
 
->"%SHARE%\startup.nsh" echo fs0:\uefismbios.efi /apply
+>"%SHARE%\startup.nsh" echo fs0:\smeditor.efi /apply
 
 if not exist "%VARS%" copy /Y "%FV%\OVMF_VARS.fd" "%VARS%" >nul
 
@@ -70,12 +70,12 @@ echo Share: %SHARE%
 echo.
 echo In the UEFI Shell run:
 echo   fs0:
-echo   uefismbios.efi
+echo   smeditor.efi
 echo.
 
 cd /d "%PROJECT%"
 
-set ARGS=-machine pc-q35-9.0 -cpu Nehalem -smp 12,sockets=1,cores=6,threads=2 -m 32G
+set ARGS=-machine pc-q35-9.0 -cpu Nehalem -smp 12,sockets=1,cores=6,threads=2 -m 80G
 set ARGS=%ARGS% -drive "if=pflash,format=raw,unit=0,readonly=on,file=%OVMF%"
 set ARGS=%ARGS% -drive "if=pflash,format=raw,unit=1,file=%VARS%"
 set ARGS=%ARGS% -smbios type=0,vendor="American Megatrends International,, LLC.",version="1811",date="08/15/2024",release=18.11,uefi=on

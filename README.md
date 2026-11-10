@@ -4,11 +4,16 @@ A simple UEFI application for viewing and editing SMBIOS information, built with
 
 ## Screenshots
 
-### Main Menu
-![Main Menu](screenshots/main-menu.png)
-
-### Field Actions
-![Field Actions](screenshots/field-actions.png)
+<table>
+  <tr>
+    <th align="center">Main Menu</th>
+    <th align="center">Editor</th>
+  </tr>
+  <tr>
+    <td><img src="screenshots/main-menu.png" width="100%"></td>
+    <td><img src="screenshots/field-actions.png" width="100%"></td>
+  </tr>
+</table>
 
 ## Features
 

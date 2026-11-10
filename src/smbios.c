@@ -130,38 +130,62 @@ smbios_print_record(
     }
     case SMBIOS_TYPE_SYSTEM_ENCLOSURE:
     {
-        SMBIOS_TABLE_TYPE3 *t = (SMBIOS_TABLE_TYPE3*)record;
-        UINT8 type = t->Type & 0x7F;
+        SMBIOS_TABLE_TYPE3* t = (SMBIOS_TABLE_TYPE3*)record;
 
         Print(L"--- SYSTEM ENCLOSURE INFORMATION (TYPE 3) ---\n");
+
         print_str(L"Manufacturer", Manufacturer);
-        Print(L"Chassis Type: %s (0x%02x)\n", smbios_chassis_name(type), type);
+
+        // Chassis Type
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE3, Type) + sizeof(t->Type))
+        {
+            UINT8 type = t->Type & 0x7F;
+            Print(L"Chassis Type: %s (0x%02x)\n", smbios_chassis_name(type), type);
+        }
+
         print_str(L"Serial Number", SerialNumber);
         print_str(L"Version", Version);
         print_str(L"Asset Tag", AssetTag);
+
         break;
     }
     case SMBIOS_TYPE_PROCESSOR_INFORMATION:
     {
         SMBIOS_TABLE_TYPE4 *t = (SMBIOS_TABLE_TYPE4*)record;
-        UINT16 cores = t->CoreCount, threads = t->ThreadCount;
-
-        if (cores == 0xFF && t->Hdr.Length >= 0x30) { cores = t->CoreCount2; }
-        if (threads == 0xFF && t->Hdr.Length >= 0x30) { threads = t->ThreadCount2; }
 
         Print(L"--- PROCESSOR INFORMATION (TYPE 4) ---\n");
+
         print_str(L"Socket", Socket);
         print_str(L"Manufacturer", ProcessorManufacturer);
         print_str(L"Version", ProcessorVersion);
         print_str(L"Serial Number", SerialNumber);
         print_str(L"Asset Tag", AssetTag);
         print_str(L"Part Number", PartNumber);
-        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, CoreCount) + sizeof(t->CoreCount)) {
-            Print(L"Cores: %u\n", t->CoreCount);
+
+        // Core Count
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, CoreCount) + sizeof(t->CoreCount))
+        {
+            UINT16 cores = t->CoreCount;
+
+            if (cores == 0xFF && record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, CoreCount2) + sizeof(t->CoreCount2)) {
+                cores = t->CoreCount2;
+            }
+
+            Print(L"Core Count: %u\n", cores);
         }
-        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, ThreadCount) + sizeof(t->ThreadCount)) {
-            Print(L"Threads: %u\n", t->ThreadCount);
+
+        // Thread Count
+        if (record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, ThreadCount) + sizeof(t->ThreadCount))
+        {
+            UINT16 threads = t->ThreadCount;
+
+            if (threads == 0xFF && record->Length >= OFFSET_OF(SMBIOS_TABLE_TYPE4, ThreadCount2) + sizeof(t->ThreadCount2)) {
+                threads = t->ThreadCount2;
+            }
+
+            Print(L"Thread Count: %u\n", threads);
         }
+
         break;
     }
     case SMBIOS_TYPE_MEMORY_DEVICE:
@@ -209,6 +233,7 @@ smbios_print_record(
                 Print(L"Speed: %u MT/s\n", t->Speed);
             }
         }
+
         break;
     }
     }
@@ -237,8 +262,7 @@ smbios_print_info(
         return status;
     }
 
-    while (!EFI_ERROR(status = smbios->GetNext(
-        smbios, &handle, NULL, &record, NULL)))
+    while (!EFI_ERROR(status = smbios->GetNext(smbios, &handle, NULL, &record, NULL)))
     {
         switch (record->Type)
         {
@@ -255,6 +279,7 @@ smbios_print_info(
         }
 
         gST->ConOut->ClearScreen(gST->ConOut);
+        Print(L"SMBIOS Version: %u.%u\n\n", (UINTN)smbios->MajorVersion, (UINTN)smbios->MinorVersion);
 
         if (record->Type == SMBIOS_TYPE_MEMORY_DEVICE) {
             Print(L"--- [%u] ", memory_index++);
